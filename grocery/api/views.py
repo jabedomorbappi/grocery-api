@@ -139,3 +139,65 @@ from rest_framework.permissions import IsAuthenticated
 @permission_classes([IsAuthenticated])
 def protected_view(request):
     return Response({"message": "You are logged in"})
+
+
+
+
+
+
+from .models import CartItem
+
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_cart(request):
+    user = request.user
+    product_id = request.data.get('product_id')
+    quantity = request.data.get('quantity', 1)
+
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return Response({"error": "Product not found"}, status=404)
+
+    cart_item, created = CartItem.objects.get_or_create(
+        user=user,
+        product=product
+    )
+
+    if not created:
+        cart_item.quantity += int(quantity)
+    else:
+        cart_item.quantity = int(quantity)
+
+    cart_item.save()
+
+    return Response({"message": "Added to cart"})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def view_cart(request):
+    user = request.user
+    cart_items = CartItem.objects.filter(user=user)
+
+    data = []
+    total_price = 0
+
+    for item in cart_items:
+        item_total = item.product.price * item.quantity
+        total_price += item_total
+
+        data.append({
+            "product": item.product.name,
+            "price": item.product.price,
+            "quantity": item.quantity,
+            "total": item_total
+        })
+
+    return Response({
+        "cart": data,
+        "total_price": total_price
+    })
