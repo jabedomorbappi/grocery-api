@@ -5,7 +5,7 @@ from django.shortcuts import render
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Product
+from .models import Product,Order,OrderItem
 from .serializers import ProductSerializer
 ## creaete register api
 
@@ -263,3 +263,96 @@ def bulk_update_cart(request):
     return Response({"message": "Cart updated successfully"})
 
 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def checkout(request):
+    user = request.user
+    cart_items = CartItem.objects.filter(user=user)
+
+    if not cart_items:
+        return Response({"error": "Cart is empty"}, status=400)
+
+    total_price = 0
+
+    order = Order.objects.create(user=user, total_price=0)
+
+    for item in cart_items:
+        item_total = item.product.price * item.quantity
+        total_price += item_total
+
+        OrderItem.objects.create(
+            order=order,
+            product=item.product,
+            quantity=item.quantity,
+            price=item.product.price
+        )
+
+    order.total_price = total_price
+    order.save()
+
+    cart_items.delete()  # clear cart after order
+
+    return Response({
+        "message": "Order placed successfully",
+        "order_id": order.id,
+        "total_price": total_price
+    })
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def order_history(request):
+    user = request.user
+    orders = Order.objects.filter(user=user).order_by('-created_at')
+
+    data = []
+
+    for order in orders:
+        items = order.items.all()
+
+        item_list = []
+        for item in items:
+            item_list.append({
+                "product": item.product.name,
+                "quantity": item.quantity,
+                "price": item.price
+            })
+
+        data.append({
+            "order_id": order.id,
+            "total_price": order.total_price,
+            "created_at": order.created_at,
+            "items": item_list
+        })
+
+    return Response(data)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def order_detail(request, id):
+    try:
+        order = Order.objects.get(id=id, user=request.user)
+    except Order.DoesNotExist:
+        return Response({"error": "Order not found"}, status=404)
+
+    items = order.items.all()
+
+    item_list = []
+    for item in items:
+        item_list.append({
+            "product": item.product.name,
+            "quantity": item.quantity,
+            "price": item.price
+        })
+
+    return Response({
+        "order_id": order.id,
+        "total_price": order.total_price,
+        "created_at": order.created_at,
+        "items": item_list
+    })

@@ -24,3 +24,30 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.product.name}"
+    
+
+
+
+ ###  we will create a order model 
+ # 
+ # 
+ # 
+ #    
+
+class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    total_price = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Order {self.id} - {self.user.username}"
+    
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)
+    quantity = models.IntegerField()
+    price = models.FloatField()
+
+    def __str__(self):
+        return f"{self.product.name} x {self.quantity}"
