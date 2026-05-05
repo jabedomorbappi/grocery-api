@@ -125,6 +125,13 @@ REST_FRAMEWORK = {
 }
 
 
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),   # or 1 day / 30 days
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+}
+
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 

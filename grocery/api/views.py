@@ -201,3 +201,65 @@ def view_cart(request):
         "cart": data,
         "total_price": total_price
     })
+
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_from_cart(request):
+    user = request.user
+    product_id = request.data.get('product_id')
+
+    try:
+        cart_item = CartItem.objects.get(user=user, product_id=product_id)
+        cart_item.delete()
+        return Response({"message": "Item removed from cart"})
+    except CartItem.DoesNotExist:
+        return Response({"error": "Item not found"}, status=404)
+    
+
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_cart(request):
+    user = request.user
+    product_id = request.data.get('product_id')
+    quantity = request.data.get('quantity')
+
+    try:
+        cart_item = CartItem.objects.get(user=user, product_id=product_id)
+        cart_item.quantity = quantity
+        cart_item.save()
+        return Response({"message": "Cart updated"})
+    except CartItem.DoesNotExist:
+        return Response({"error": "Item not found"}, status=404)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def bulk_update_cart(request):
+    user=request.user
+    items=request.data.get('items',[])
+
+
+    if not items:
+        return Response({"error":"No items provided"},status=400)
+    
+    for item in items:
+        product_id=item.get('product_id')
+        quantity=item.get('quantity')
+        if not product_id or not quantity:
+            continue
+
+
+        try:
+            cart_item = CartItem.objects.get(user=user, product_id=product_id)
+            cart_item.quantity = quantity
+            cart_item.save()
+        except CartItem.DoesNotExist:
+            continue
+
+    return Response({"message": "Cart updated successfully"})
+
+
