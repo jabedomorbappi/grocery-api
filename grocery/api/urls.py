@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import product_list,home,product_detail
-from .views import register_user,login_user,protected_view,remove_from_cart,update_cart,bulk_update_cart,checkout,order_history,order_detail
+from .views import (register_user,login_user,protected_view,remove_from_cart,update_cart,
+bulk_update_cart,checkout,order_history,order_detail,update_order_status,make_payment)
 
 from .views import add_to_cart, view_cart
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -26,6 +27,8 @@ urlpatterns = [
     path('orders/', order_history),
 
     path('orders/<int:id>/', order_detail),
+    path('orders/<int:id>/status/', update_order_status),
+    path('orders/<int:id>/pay/', make_payment),
    
 ]
 

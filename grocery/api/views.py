@@ -150,27 +150,30 @@ from .models import CartItem
 
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import CartItem, Product
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request):
     user = request.user
-    product_id = request.data.get('product_id')
-    quantity = request.data.get('quantity', 1)
+    product_id = request.data.get("product_id")
+    quantity = request.data.get("quantity", 1)
 
-    try:
-        product = Product.objects.get(id=product_id)
-    except Product.DoesNotExist:
-        return Response({"error": "Product not found"}, status=404)
+    product = Product.objects.get(id=product_id)
 
     cart_item, created = CartItem.objects.get_or_create(
         user=user,
-        product=product
+        product=product,
+        is_ordered=False
     )
 
     if not created:
         cart_item.quantity += int(quantity)
     else:
-        cart_item.quantity = int(quantity)
+        cart_item.quantity = quantity
 
     cart_item.save()
 
@@ -182,7 +185,6 @@ def add_to_cart(request):
 def view_cart(request):
     user = request.user
     cart_items = CartItem.objects.filter(user=user)
-
     data = []
     total_price = 0
 
@@ -191,16 +193,14 @@ def view_cart(request):
         total_price += item_total
 
         data.append({
+            "id": item.id,  # <--- ADD THIS LINE
             "product": item.product.name,
             "price": item.product.price,
             "quantity": item.quantity,
             "total": item_total
         })
 
-    return Response({
-        "cart": data,
-        "total_price": total_price
-    })
+    return Response({"cart": data, "total_price": total_price})
 
 
 
@@ -220,20 +220,28 @@ def remove_from_cart(request):
 
 
 
+from django.shortcuts import get_object_or_404
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_cart(request):
-    user = request.user
-    product_id = request.data.get('product_id')
-    quantity = request.data.get('quantity')
+    cart_id = request.data.get("cart_id")
+    quantity = request.data.get("quantity")
 
-    try:
-        cart_item = CartItem.objects.get(user=user, product_id=product_id)
-        cart_item.quantity = quantity
-        cart_item.save()
-        return Response({"message": "Cart updated"})
-    except CartItem.DoesNotExist:
-        return Response({"error": "Item not found"}, status=404)
+    cart_item = get_object_or_404(
+        CartItem,
+        id=cart_id,
+        user=request.user
+    )
+
+    if int(quantity) <= 0:
+        cart_item.delete()
+        return Response({"message": "deleted"})
+
+    cart_item.quantity = int(quantity)
+    cart_item.save()
+
+    return Response({"message": "updated"})
 
 
 @api_view(['PUT'])
@@ -355,4 +363,60 @@ def order_detail(request, id):
         "total_price": order.total_price,
         "created_at": order.created_at,
         "items": item_list
+    })
+
+
+
+
+
+
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_order_status(request, id):
+    try:
+        order = Order.objects.get(id=id)
+    except Order.DoesNotExist:
+        return Response({"error": "Order not found"}, status=404)
+
+    # Optional: restrict to admin
+    # if not request.user.is_staff:
+    #     return Response({"error": "Not allowed"}, status=403)
+
+    new_status = request.data.get('status')
+
+    if new_status not in ['pending', 'processing', 'shipped', 'delivered']:
+        return Response({"error": "Invalid status"}, status=400)
+
+    order.status = new_status
+    order.save()
+
+    return Response({"message": "Order status updated"})
+
+
+
+
+
+###    PAYMENT API
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def make_payment(request, id):
+    try:
+        order = Order.objects.get(id=id, user=request.user)
+    except Order.DoesNotExist:
+        return Response({"error": "Order not found"}, status=404)
+
+    if order.payment_status:
+        return Response({"message": "Already paid"})
+
+    # simulate payment success
+    order.payment_status = True
+    order.status = "processing"
+    order.save()
+
+    return Response({
+        "message": "Payment successful",
+        "order_id": order.id
     })

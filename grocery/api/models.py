@@ -35,12 +35,21 @@ class CartItem(models.Model):
  #    
 
 class Order(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     total_price = models.FloatField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
+    payment_status = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Order {self.id} - {self.user.username}"
+        return f"Order {self.id} - {self.status}"
     
 
 class OrderItem(models.Model):
