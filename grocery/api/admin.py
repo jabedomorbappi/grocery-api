@@ -1,11 +1,21 @@
+
 from django.contrib import admin
 
-# Register your models here.
-from django.contrib import admin
-from .models import Product
+###--------------Import all of my Models or table 
+
+
+from .models import (Product,CartItem,Order,OrderItem)
+
+
+
+
+
+
+# ----------------------------register alll of the models or table 
 
 admin.site.register(Product)
 
-from .models import CartItem
 
 admin.site.register(CartItem)
+admin.site.register(Order)
+admin.site.register(OrderItem)

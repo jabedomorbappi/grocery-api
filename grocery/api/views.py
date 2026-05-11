@@ -313,27 +313,25 @@ def checkout(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def order_history(request):
-    user = request.user
-    orders = Order.objects.filter(user=user).order_by('-created_at')
+    orders = Order.objects.filter(user=request.user)
 
     data = []
 
     for order in orders:
         items = order.items.all()
 
-        item_list = []
-        for item in items:
-            item_list.append({
-                "product": item.product.name,
-                "quantity": item.quantity,
-                "price": item.price
-            })
-
         data.append({
-            "order_id": order.id,
+            "id": order.id,
+            "status": order.status,
             "total_price": order.total_price,
-            "created_at": order.created_at,
-            "items": item_list
+            "payment_status": order.payment_status,
+            "items": [
+                {
+                    "product": i.product.name,
+                    "quantity": i.quantity,
+                    "price": i.price
+                } for i in items
+            ]
         })
 
     return Response(data)
@@ -346,13 +344,12 @@ def order_detail(request, id):
     try:
         order = Order.objects.get(id=id, user=request.user)
     except Order.DoesNotExist:
-        return Response({"error": "Order not found"}, status=404)
+        return Response({"error": "Not found"}, status=404)
 
-    items = order.items.all()
+    items = []
 
-    item_list = []
-    for item in items:
-        item_list.append({
+    for item in order.items.all():
+        items.append({
             "product": item.product.name,
             "quantity": item.quantity,
             "price": item.price
@@ -361,10 +358,10 @@ def order_detail(request, id):
     return Response({
         "order_id": order.id,
         "total_price": order.total_price,
-        "created_at": order.created_at,
-        "items": item_list
+        "status": order.status,
+        "payment_status": order.payment_status,
+        "items": items
     })
-
 
 
 

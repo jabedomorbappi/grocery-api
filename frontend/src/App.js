@@ -1,6 +1,9 @@
-import Login from "./Login";
-import Products from "./Products";
-import Cart from "./Cart";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Products from "./pages/Products";
+import Cart from "./pages/Cart";
+import Navbar from "./components/Navbar";
+
 import { useState } from "react";
 
 function App() {
@@ -8,16 +11,26 @@ function App() {
     !!localStorage.getItem("token")
   );
 
+  const [authPage, setAuthPage] = useState("login");
+  const [page, setPage] = useState("products");
+
+  if (!loggedIn) {
+    return authPage === "login" ? (
+      <Login
+        setLoggedIn={setLoggedIn}
+        goToRegister={() => setAuthPage("register")}
+      />
+    ) : (
+      <Register switchToLogin={() => setAuthPage("login")} />
+    );
+  }
+
   return (
     <div>
-      {loggedIn ? (
-  <>
-    <Products />
-    <Cart />
-  </>
-) : (
-  <Login setLoggedIn={setLoggedIn} />
-)}
+      <Navbar setPage={setPage} />
+
+      {page === "products" && <Products />}
+      {page === "cart" && <Cart />}
     </div>
   );
 }
